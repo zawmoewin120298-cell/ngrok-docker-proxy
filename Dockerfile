@@ -27,21 +27,26 @@ COPY ui /ui
 RUN npm run build
 
 # =============================================
-# 3. Final Alpine Stage (Railway Compatible)
+# 3. Final Alpine Stage (Socket-to-Port Bridge)
 # =============================================
 FROM alpine
 
-RUN apk add --no-cache bash curl
+# socat ထည့်သွင်းခြင်း (TCP Port နှင့် Unix Socket ကို ချိတ်ဆက်ရန်)
+RUN apk add --no-cache bash curl socat
 
-# Copy built binaries and UI assets from builders
 COPY --from=builder /backend/bin/service /service
 COPY --from=client-builder /ui/build /ui
 
-# Railway ၏ PORT variable ကို ဖမ်းယူပြီး Service စတင်ရန် Startup script
+# Startup script ဖန်တီးခြင်း
 RUN printf '#!/bin/sh\n\
 PORT="${PORT:-8080}"\n\
-echo "Starting service on port $PORT..."\n\
-exec /service\n' > /start.sh \
+mkdir -p /run/guest\n\
+rm -f /run/guest/ext.sock\n\
+echo "Starting backend service on Unix socket..."\n\
+/service -socket /run/guest/ext.sock &\n\
+sleep 2\n\
+echo "Bridging TCP port $PORT to /run/guest/ext.sock..."\n\
+exec socat TCP-LISTEN:$PORT,fork,reuseaddr UNIX-CONNECT:/run/guest/ext.sock\n' > /start.sh \
     && chmod +x /start.sh
 
 EXPOSE 8080
