@@ -37,11 +37,11 @@ RUN apk add --no-cache bash curl
 COPY --from=builder /backend/bin/service /service
 COPY --from=client-builder /ui/build /ui
 
-# Railway ၏ PORT variable ကို ဖမ်းယူပြီး service စတင်ရန် Startup script ဖန်တီးခြင်း
+# Railway ၏ PORT variable ကို ဖမ်းယူပြီး Service စတင်ရန် Startup script
 RUN printf '#!/bin/sh\n\
 PORT="${PORT:-8080}"\n\
 echo "Starting service on port $PORT..."\n\
-exec /service -port "$PORT"\n' > /start.sh \
+exec /service\n' > /start.sh \
     && chmod +x /start.sh
 
 EXPOSE 8080
